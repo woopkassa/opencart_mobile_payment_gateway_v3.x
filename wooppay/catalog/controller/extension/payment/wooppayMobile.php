@@ -2,6 +2,16 @@
 
 class ControllerExtensionPaymentWooppayMobile extends Controller
 {
+	public $phone = null;
+
+	public function __construct($registry)
+	{
+		parent::__construct($registry);
+		if ($this->customer->isLogged()) {
+			$this->phone = $this->customer->getTelephone();
+		}
+	}
+
 	public function index()
 	{
 		$data['button_confirm'] = $this->language->get('button_confirm');
@@ -23,11 +33,16 @@ class ControllerExtensionPaymentWooppayMobile extends Controller
 		return $client->login($login_request) ? $client : false;
 	}
 
-	public function sendSMS()
+	public function sendSms()
 	{
 		try {
 			if ($client = $this->login()) {
-				$phone = $_POST['phone'];
+				if (isset($this->phone)) {
+					$phone = $this->phone;
+				} else {
+					$phone = $_POST['phone'];
+				}
+				$phone = preg_replace('/[^0-9]/', '', $phone);
 				$operator = $client->checkOperator($phone);
 				$operator = $operator->response->operator;
 				if ($operator == 'beeline' || $operator == 'activ' || $operator == 'kcell') {
@@ -62,35 +77,41 @@ class ControllerExtensionPaymentWooppayMobile extends Controller
 		}
 	}
 
+
 	public function invoice()
 	{
 		$this->load->model('checkout/order');
 		$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);
-		$phone = substr($order_info['telephone'], 1);
+		$phone = preg_replace('/[^0-9]/', '', $order_info['telephone']);
+		$phone = substr($phone, 1);
 		$code = $_POST['code'];
 		try {
 			if ($client = $this->login()) {
-				$prefix = trim($this->config->get('payment_wooppayMobile_prefix'));
+				$prefix = trim($this->config->get('wooppayMobile_prefix'));
 				$invoice_request = new CashCreateInvoiceByServiceRequest();
-				$invoice_request->referenceId = $prefix . $order_info['order_id'];
+				$invoice_request->referenceId = $prefix . $order_info['order_id'] . '.' . time();
 				$invoice_request->backUrl = $this->url->link('checkout/success');
-				$invoice_request->requestUrl = str_replace('&amp;', '&', $this->url->link('extension/payment/wooppayMobile/callback', 'order=' . $order_info['order_id'] . '&key=' . md5($order_info['order_id']), 'SSL'));
+				$invoice_request->requestUrl = str_replace('&amp;', '&',
+					$this->url->link('extension/payment/wooppayMobile/callback',
+						'order=' . $order_info['order_id'] . '&key=' . md5($order_info['order_id']), 'SSL'));
 				$invoice_request->addInfo = $code;
-				$invoice_request->amount = (float)$this->currency->format($order_info['total'], 'KZT', '', false);
-				$invoice_request->serviceName = $this->config->get('payment_wooppayMobile_service');
+				$invoice_request->amount = $order_info['total'];
+				$invoice_request->serviceName = $this->config->get('wooppayMobile_service');
 				$invoice_request->deathDate = '';
 				$invoice_request->description = 'Оплата заказа №' . $order_info['order_id'];
 				$invoice_request->userEmail = $order_info['email'];
 				$invoice_request->userPhone = $phone;
 				$invoice_request->serviceType = 2;
 				$invoice_data = $client->createInvoice($invoice_request);
-
-				$this->model_checkout_order->addOrderHistory($order_info['order_id'], $this->config->get('payment_wooppayMobile_order_processing_status_id'));
+				$this->model_checkout_order->addOrderHistory($order_info['order_id'],
+					$this->config->get('wooppayMobile_order_processing_status_id'));
 				$this->load->model('extension/payment/wooppayMobile');
 
-				$this->model_extension_payment_wooppayMobile->addTransaction(['order_id' => $order_info['order_id'], 'wooppay_transaction_id' => $invoice_data->response->operationId]);
-				$url = $invoice_data->response->operationUrl;
-				echo $url;
+				$this->model_extension_payment_wooppayMobile->addTransaction([
+					'order_id' => $order_info['order_id'],
+					'wooppayMobile_transaction_id' => $invoice_data->response->operationId
+				]);
+				echo $invoice_request->backUrl;
 			}
 		} catch (Exception $e) {
 			if (strpos($e->getMessage(), '603') != false) {
@@ -103,10 +124,6 @@ class ControllerExtensionPaymentWooppayMobile extends Controller
 			}
 			if (strpos($e->getMessage(), '224') != false) {
 				echo 224;
-				die();
-			}
-			if (strpos($e->getMessage(), '225') != false) {
-				echo 225;
 				die();
 			}
 			if (strpos($e->getMessage(), '226') != false) {
@@ -133,17 +150,24 @@ class ControllerExtensionPaymentWooppayMobile extends Controller
 
 						if ($operation_data->response->records[0]->status == WooppayOperationStatus::OPERATION_STATUS_DONE) {
 							$this->load->model('checkout/order');
-							$this->model_checkout_order->addOrderHistory($this->request->get['order'], $this->config->get('payment_wooppayMobile_order_success_status_id'));
-						} else
-							$this->log->write(sprintf('Wooppay callback : счет не оплачен (%s) order id (%s)', $operation_data->response->records[0]->status, $this->request->get['order']));
-					} else
-						$this->log->write(sprintf('Wooppay order not found : %s order id (%s)', $this->request->get['order'], $this->request->get['order']));
+							$this->model_checkout_order->addOrderHistory($this->request->get['order'],
+								$this->config->get('wooppayMobile_order_success_status_id'));
+						} else {
+							$this->log->write(sprintf('Wooppay callback : счет не оплачен (%s) order id (%s)',
+								$operation_data->response->records[0]->status, $this->request->get['order']));
+						}
+					} else {
+						$this->log->write(sprintf('Wooppay order not found : %s order id (%s)',
+							$this->request->get['order'], $this->request->get['order']));
+					}
 				}
 			} catch (Exception $e) {
-				$this->log->write(sprintf('Wooppay exception : %s order id (%s)', $e->getMessage(), $this->request->get['order']));
+				$this->log->write(sprintf('Wooppay exception : %s order id (%s)', $e->getMessage(),
+					$this->request->get['order']));
 			}
-		} else
+		} else {
 			$this->log->write('Wooppay callback : неверный key или order : ' . print_r($_REQUEST, true));
+		}
 		echo json_encode(['data' => 1]);
 	}
 }
