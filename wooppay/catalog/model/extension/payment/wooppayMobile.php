@@ -37,7 +37,7 @@ class ModelExtensionPaymentWooppayMobile extends Model
 	{
 		$this->db->query("INSERT INTO `" . DB_PREFIX . "wooppay_mobile_order_transaction` SET
 			`order_id` = '" . (int)$transaction_data['order_id'] . "',
-			`wooppay_transaction_id` = '" . $this->db->escape($transaction_data['wooppay_transaction_id']) . "'");
+			`wooppay_transaction_id` = '" . $this->db->escape($transaction_data['wooppayMobile_transaction_id']) . "'");
 	}
 
 	public function getTransactionRow($order_id)
