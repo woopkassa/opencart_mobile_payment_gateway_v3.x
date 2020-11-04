@@ -8,7 +8,7 @@ $_['text_payment'] = 'Payment';
 $_['text_success'] = 'Module configuration updated!';
 $_['text_yes'] = 'Yes';
 $_['text_no'] = 'No';
-$_['text_wooppay'] = '<a onclick="window.open(\'https://www.wooppay.com\');"><img src="view/image/payment/wooppayMobile.png" alt="Wooppay Mobile" title="Wooppay Mobile" style="border: 1px solid #EEEEEE;" /></a>';
+$_['text_wooppayMobile'] = '<a onclick="window.open(\'https://www.wooppay.com\');"><img src="view/image/payment/wooppay_mobile.svg" alt="Wooppay Mobile" title="Wooppay Mobile" style="border: 1px solid #EEEEEE;height: 56px;width: auto" /></a>';
 // Entry
 $_['entry_merchant'] = 'Login:';
 $_['entry_password'] = 'Password:';
