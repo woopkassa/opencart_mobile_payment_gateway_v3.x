@@ -1,4 +1,4 @@
-# opencart_payment_gateway_v2.x
+# opencart_mobile_payment_gateway_v3.x
 Расширение платежный шлюз Woopkassa для CMS OpenCart. Версия 2.*
 
 ## Требования:
