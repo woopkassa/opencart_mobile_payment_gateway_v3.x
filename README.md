@@ -1,5 +1,5 @@
 # opencart_mobile_payment_gateway_v3.x
-Расширение платежный шлюз Woopkassa для CMS OpenCart. Версия 2.*
+Расширение платежный шлюз Woopkassa для CMS OpenCart. Версия 3.*
 
 ## Требования:
 Для работы модуля должно быть установлено и включено PHP расширение SOAP.
