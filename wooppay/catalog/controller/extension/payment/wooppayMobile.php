@@ -148,7 +148,7 @@ class ControllerExtensionPaymentWooppayMobile extends Controller
 							exit;
 						}
 
-						if ($operation_data->response->records[0]->status == WooppayOperationStatus::OPERATION_STATUS_DONE) {
+						if ($operation_data->response->records[0]->status == WooppayOperationStatus::OPERATION_STATUS_DONE || $operation_data->response->records[0]->status == WooppayOperationStatus::OPERATION_STATUS_WAITING) {
 							$this->load->model('checkout/order');
 							$this->model_checkout_order->addOrderHistory($this->request->get['order'],
 								$this->config->get('wooppayMobile_order_success_status_id'));
